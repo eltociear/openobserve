@@ -27,11 +27,13 @@ use crate::infra::metrics;
 use crate::meta::alert::{Alert, Trigger};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::{IngestionResponse, RecordStatus, StreamStatus};
+use crate::meta::usage::UsageEvent;
 use crate::meta::StreamType;
 use crate::service::db;
 use crate::service::ingestion::write_file;
 use crate::service::logs::StreamMeta;
 use crate::service::schema::stream_schema_exists;
+use crate::service::usage::report_ingest_stats;
 
 pub async fn ingest(
     org_id: &str,
@@ -187,30 +189,30 @@ pub async fn ingest(
     }
 
     // write to file
-    write_file(buf, thread_id, org_id, stream_name, StreamType::Logs);
+    let mut stream_file_name = "".to_string();
+
+    let mut req_stats = write_file(buf, thread_id, org_id, stream_name, &mut stream_file_name);
+
+    if stream_file_name.is_empty() {
+        return Ok(HttpResponse::Ok().json(IngestionResponse::new(
+            http::StatusCode::OK.into(),
+            vec![stream_status],
+        )));
+    }
 
     // only one trigger per request, as it updates etcd
     super::evaluate_trigger(trigger, stream_alerts_map).await;
 
-    metrics::HTTP_RESPONSE_TIME
-        .with_label_values(&[
-            "/_multi",
-            "200",
-            org_id,
-            stream_name,
-            StreamType::Logs.to_string().as_str(),
-        ])
-        .observe(start.elapsed().as_secs_f64());
-    metrics::HTTP_INCOMING_REQUESTS
-        .with_label_values(&[
-            "/_multi",
-            "200",
-            org_id,
-            stream_name,
-            StreamType::Logs.to_string().as_str(),
-        ])
-        .inc();
-
+    req_stats.response_time = start.elapsed().as_secs_f64();
+    //metric + data usage
+    report_ingest_stats(
+        &req_stats,
+        org_id,
+        &stream_name,
+        StreamType::Logs,
+        UsageEvent::Multi,
+    )
+    .await;
     Ok(HttpResponse::Ok().json(IngestionResponse::new(
         http::StatusCode::OK.into(),
         vec![stream_status],

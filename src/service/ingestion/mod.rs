@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{
+    common::json::{Map, Value},
+    infra::config::CONFIG,
+    meta::usage::RequestStats,
+};
 use ahash::AHashMap;
 use arrow_schema::Schema;
 use bytes::{BufMut, BytesMut};
@@ -369,6 +374,43 @@ pub fn write_file(
 #[cfg(feature = "zo_functions")]
 pub fn init_functions_runtime() -> Runtime {
     crate::common::functions::init_vrl_runtime()
+}
+
+pub fn write_file(
+    buf: AHashMap<String, Vec<String>>,
+    thread_id: actix_web::web::Data<usize>,
+    org_id: &str,
+    stream_name: &str,
+    stream_file_name: &mut String,
+) -> RequestStats {
+    let mut write_buf = BytesMut::new();
+    for (key, entry) in buf {
+        if entry.is_empty() {
+            continue;
+        }
+        write_buf.clear();
+        for row in &entry {
+            write_buf.put(row.as_bytes());
+            write_buf.put("\n".as_bytes());
+        }
+        let file = crate::infra::file_lock::get_or_create(
+            *thread_id.as_ref(),
+            org_id,
+            stream_name,
+            StreamType::Logs,
+            &key,
+            CONFIG.common.wal_memory_mode_enabled,
+        );
+        if stream_file_name.is_empty() {
+            *stream_file_name = file.full_name();
+        }
+        file.write(write_buf.as_ref());
+    }
+    RequestStats {
+        size: write_buf.len() as f64,
+        records: write_buf.len() as u64,
+        response_time: 0.0,
+    }
 }
 
 #[cfg(test)]

@@ -181,7 +181,15 @@ pub async fn ingest(
     }
 
     // write to file
-    write_file(buf, thread_id, org_id, stream_name, StreamType::Logs);
+    let mut stream_file_name = "".to_string();
+    write_file(buf, thread_id, org_id, stream_name, &mut stream_file_name);
+
+    if stream_file_name.is_empty() {
+        return Ok(HttpResponse::Ok().json(IngestionResponse::new(
+            http::StatusCode::OK.into(),
+            vec![stream_status],
+        )));
+    }
 
     // only one trigger per request, as it updates etcd
     super::evaluate_trigger(trigger, stream_alerts_map).await;
