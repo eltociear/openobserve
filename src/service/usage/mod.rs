@@ -44,7 +44,7 @@ pub async fn report_ingest_stats(
     }];
     let json_str = serde_json::to_string(&usage).unwrap();
     let _ = json::ingest(
-        org_id,
+        "_meta",
         "usage",
         actix_web::web::Bytes::from(json_str),
         web::Data::new(0),

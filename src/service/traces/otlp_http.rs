@@ -21,14 +21,18 @@ use opentelemetry_proto::tonic::collector::trace::v1::ExportTraceServiceRequest;
 use prost::Message;
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Error};
+use std::time::Instant;
+use tracing::info_span;
 
 use crate::common::json::{Map, Value};
 use crate::infra::config::CONFIG;
 use crate::infra::wal;
 use crate::meta::alert::{Alert, Trigger};
 use crate::meta::traces::Event;
-use crate::service::ingestion::{format_stream_name, get_partition_key_record};
+use crate::meta::usage::{RequestStats, UsageEvent};
+use crate::service::ingestion::{format_stream_name, get_partition_key_record, write_file};
 use crate::service::schema::{add_stream_schema, stream_schema_exists};
+use crate::service::usage::report_ingest_stats;
 use crate::{
     common::json,
     infra::cluster,
@@ -59,6 +63,9 @@ pub async fn traces_json(
     thread_id: std::sync::Arc<usize>,
     body: actix_web::web::Bytes,
 ) -> Result<HttpResponse, Error> {
+    let start = Instant::now();
+    let loc_span = info_span!("service:otlp_http:traces_json");
+    let _guard = loc_span.enter();
     if !cluster::is_ingester(&cluster::LOCAL_NODE_ROLE) {
         return Ok(
             HttpResponse::InternalServerError().json(meta::http::HttpResponse::error(
@@ -69,7 +76,6 @@ pub async fn traces_json(
     }
     let traces_stream_name = "default";
 
-    let mut trace_meta_coll: AHashMap<String, Vec<json::Map<String, Value>>> = AHashMap::new();
     let mut stream_alerts_map: AHashMap<String, Vec<Alert>> = AHashMap::new();
     let mut traces_schema_map: AHashMap<String, Schema> = AHashMap::new();
 
@@ -244,7 +250,7 @@ pub async fn traces_json(
                                     .to_string(),
                                 start_time,
                                 end_time,
-                                duration: (end_time - start_time) / 1000000,
+                                duration: (end_time - start_time) as f64 / 1000000.00,
                                 reference: span_ref,
                                 service_name: service_name.clone(),
                                 attributes: span_att_map,
@@ -338,19 +344,7 @@ pub async fn traces_json(
                             }
 
                             let hour_buf = data_buf.entry(hour_key.clone()).or_default();
-
                             hour_buf.push(value_str);
-                            //Trace Metadata
-                            let mut trace_meta = Map::new();
-                            trace_meta.insert(
-                                "trace_id".to_owned(),
-                                json::Value::String(trace_id.clone()),
-                            );
-                            trace_meta.insert("_timestamp".to_owned(), start_time.into());
-
-                            let hour_meta_buf =
-                                trace_meta_coll.entry(hour_key.clone()).or_default();
-                            hour_meta_buf.push(trace_meta);
                         }
                     }
                 }
@@ -364,11 +358,6 @@ pub async fn traces_json(
             );
         }
     }
-    let mut write_buf = BytesMut::new();
-    for (key, entry) in data_buf {
-        if entry.is_empty() {
-            continue;
-        }
 
         write_buf.clear();
         for row in &entry {
@@ -391,24 +380,11 @@ pub async fn traces_json(
             org_id,
             traces_stream_name,
             StreamType::Traces,
+            &file,
             &mut traces_schema_map,
+            min_ts,
         )
         .await;
-        if !schema_exists.has_fields && !traces_file_name.is_empty() {
-            let file = OpenOptions::new()
-                .read(true)
-                .open(&traces_file_name)
-                .unwrap();
-            add_stream_schema(
-                org_id,
-                traces_stream_name,
-                StreamType::Traces,
-                &file,
-                &mut traces_schema_map,
-                min_ts,
-            )
-            .await;
-        }
     }
 
     // only one trigger per request, as it updates etcd
@@ -433,6 +409,15 @@ pub async fn traces_json(
             .await;
         }
     }
+    final_req_stats.response_time = start.elapsed().as_secs_f64();
+    //metric + data usage
+    report_ingest_stats(
+        &final_req_stats,
+        org_id,
+        StreamType::Traces,
+        UsageEvent::Traces,
+    )
+    .await;
 
     Ok(HttpResponse::Ok().json(meta::http::HttpResponse::message(
         http::StatusCode::OK.into(),
