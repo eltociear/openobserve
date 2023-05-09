@@ -182,7 +182,14 @@ pub async fn ingest(
 
     // write to file
     let mut stream_file_name = "".to_string();
-    write_file(buf, thread_id, org_id, stream_name, &mut stream_file_name);
+    write_file(
+        buf,
+        thread_id,
+        org_id,
+        stream_name,
+        &mut stream_file_name,
+        StreamType::Logs,
+    );
 
     if stream_file_name.is_empty() {
         return Ok(HttpResponse::Ok().json(IngestionResponse::new(

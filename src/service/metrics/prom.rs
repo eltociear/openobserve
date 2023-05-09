@@ -14,11 +14,13 @@
 
 use actix_web::{http, HttpResponse};
 use ahash::AHashMap;
+use bytes::{BufMut, BytesMut};
 use chrono::{Duration, TimeZone, Utc};
 use datafusion::arrow::datatypes::Schema;
 use promql_parser::label::MatchOp;
 use promql_parser::parser;
 use prost::Message;
+use rustc_hash::FxHashSet;
 use std::{collections::HashMap, io, time::Instant};
 
 use crate::{
@@ -28,17 +30,18 @@ use crate::{
         cluster,
         config::{CONFIG, METRIC_CLUSTER_LEADER, METRIC_CLUSTER_MAP},
         errors::{Error, Result},
-        metrics,
+        file_lock, metrics,
     },
     meta::{
         self,
         alert::{Alert, Trigger},
         prom::{self, HASH_LABEL, METADATA_LABEL, NAME_LABEL, VALUE_LABEL},
+        usage::UsageEvent,
         StreamType,
     },
     service::{
         db,
-        ingestion::{chk_schema_by_record, write_file},
+        ingestion::chk_schema_by_record,
         schema::{set_schema_metadata, stream_schema_exists},
         search as search_service,
     },
@@ -315,25 +318,68 @@ pub async fn remote_write(
         }
     }
 
-    for (stream_name, stream_data) in metric_data_map {
-        // check if we are allowed to ingest
-        if db::compact::delete::is_deleting_stream(org_id, &stream_name, StreamType::Metrics, None)
-        {
-            return Ok(
-                HttpResponse::InternalServerError().json(meta::http::HttpResponse::error(
-                    http::StatusCode::INTERNAL_SERVER_ERROR.into(),
-                    format!("stream [{stream_name}] is being deleted"),
-                )),
-            );
-        }
+    for (metric_name, metric_data) in metric_data_map {
         // write to file
-        write_file(
-            stream_data,
-            thread_id.clone(),
+        let mut write_buf = BytesMut::new();
+        for (key, entry) in metric_data {
+            if entry.is_empty() {
+                continue;
+            }
+
+            // check if we are allowed to ingest
+            if db::compact::delete::is_deleting_stream(
+                org_id,
+                &metric_name,
+                StreamType::Metrics,
+                None,
+            ) {
+                return Ok(HttpResponse::InternalServerError().json(
+                    meta::http::HttpResponse::error(
+                        http::StatusCode::INTERNAL_SERVER_ERROR.into(),
+                        format!("stream [{metric_name}] is being deleted"),
+                    ),
+                ));
+            }
+
+            write_buf.clear();
+            for row in &entry {
+                write_buf.put(row.as_bytes());
+                write_buf.put("\n".as_bytes());
+            }
+            let file = file_lock::get_or_create(
+                *thread_id.as_ref(),
+                org_id,
+                &metric_name,
+                StreamType::Metrics,
+                &key,
+                CONFIG.common.wal_memory_mode_enabled,
+            );
+            file.write(write_buf.as_ref());
+
+            // metrics
+            metrics::INGEST_RECORDS
+                .with_label_values(&[
+                    org_id,
+                    &metric_name,
+                    StreamType::Metrics.to_string().as_str(),
+                ])
+                .inc_by(entry.len() as u64);
+            metrics::INGEST_BYTES
+                .with_label_values(&[
+                    org_id,
+                    &metric_name,
+                    StreamType::Metrics.to_string().as_str(),
+                ])
+                .inc_by(write_buf.len() as u64);
+        }
+
+        let _schema_exists = stream_schema_exists(
             org_id,
-            &stream_name,
+            &metric_name,
             StreamType::Metrics,
-        );
+            &mut metric_schema_map,
+        )
+        .await;
     }
 
     // only one trigger per request, as it updates etcd
@@ -359,24 +405,15 @@ pub async fn remote_write(
     }
 
     let time = start.elapsed().as_secs_f64();
-    metrics::HTTP_RESPONSE_TIME
-        .with_label_values(&[
-            "/prometheus/api/v1/write",
-            "200",
-            org_id,
-            "",
-            &StreamType::Metrics.to_string(),
-        ])
-        .observe(time);
-    metrics::HTTP_INCOMING_REQUESTS
-        .with_label_values(&[
-            "/prometheus/api/v1/write",
-            "200",
-            org_id,
-            "",
-            &StreamType::Metrics.to_string(),
-        ])
-        .inc();
+    final_req_stats.response_time += time;
+    //metric + data usage
+    report_ingest_stats(
+        &final_req_stats,
+        org_id,
+        StreamType::Metrics,
+        UsageEvent::Metrics,
+    )
+    .await;
 
     Ok(HttpResponse::Ok().into())
 }

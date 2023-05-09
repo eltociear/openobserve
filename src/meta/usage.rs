@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UsageData {
     pub event: UsageEvent,
-    pub day: i8,
-    pub hour: i8,
-    pub month: i8,
-    pub year: i8,
+    pub day: u32,
+    pub hour: u32,
+    pub month: u32,
+    pub year: i32,
     pub organization_identifier: String,
     pub request_body: String,
     pub size: f64,

@@ -12,7 +12,6 @@ use crate::common::time::parse_i64_to_timestamp_micros;
 use crate::common::time::parse_timestamp_micro_from_value;
 use crate::infra::cluster;
 use crate::infra::config::CONFIG;
-use crate::infra::metrics;
 use crate::meta::alert::{Alert, Trigger};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::AWSRecordType;
@@ -252,7 +251,14 @@ pub async fn process(
 
     // write to file
     let mut stream_file_name = "".to_string();
-    let mut req_stats = write_file(buf, thread_id, org_id, stream_name, &mut stream_file_name);
+    let mut req_stats = write_file(
+        buf,
+        thread_id,
+        org_id,
+        stream_name,
+        &mut stream_file_name,
+        StreamType::Logs,
+    );
 
     if stream_file_name.is_empty() {
         return Ok(
@@ -275,7 +281,6 @@ pub async fn process(
     report_ingest_stats(
         &req_stats,
         org_id,
-        &stream_name,
         StreamType::Logs,
         UsageEvent::KinesisFirehose,
     )

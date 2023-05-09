@@ -23,7 +23,6 @@ use crate::common::json;
 use crate::common::time::parse_timestamp_micro_from_value;
 use crate::infra::cluster;
 use crate::infra::config::CONFIG;
-use crate::infra::metrics;
 use crate::meta::alert::{Alert, Trigger};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::{IngestionResponse, RecordStatus, StreamStatus};
@@ -191,7 +190,14 @@ pub async fn ingest(
     // write to file
     let mut stream_file_name = "".to_string();
 
-    let mut req_stats = write_file(buf, thread_id, org_id, stream_name, &mut stream_file_name);
+    let mut req_stats = write_file(
+        buf,
+        thread_id,
+        org_id,
+        stream_name,
+        &mut stream_file_name,
+        StreamType::Logs,
+    );
 
     if stream_file_name.is_empty() {
         return Ok(HttpResponse::Ok().json(IngestionResponse::new(
@@ -205,14 +211,7 @@ pub async fn ingest(
 
     req_stats.response_time = start.elapsed().as_secs_f64();
     //metric + data usage
-    report_ingest_stats(
-        &req_stats,
-        org_id,
-        &stream_name,
-        StreamType::Logs,
-        UsageEvent::Multi,
-    )
-    .await;
+    report_ingest_stats(&req_stats, org_id, StreamType::Logs, UsageEvent::Multi).await;
     Ok(HttpResponse::Ok().json(IngestionResponse::new(
         http::StatusCode::OK.into(),
         vec![stream_status],

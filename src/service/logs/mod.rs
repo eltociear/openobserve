@@ -21,7 +21,6 @@ use crate::common::json::{Map, Value};
 use crate::infra::config::CONFIG;
 use crate::meta::alert::{Alert, Evaluate, Trigger};
 use crate::meta::ingestion::RecordStatus;
-use crate::meta::usage::RequestStats;
 use crate::meta::StreamType;
 use crate::service::schema::check_for_schema;
 

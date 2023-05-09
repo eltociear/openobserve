@@ -382,8 +382,10 @@ pub fn write_file(
     org_id: &str,
     stream_name: &str,
     stream_file_name: &mut String,
+    stream_type: StreamType,
 ) -> RequestStats {
     let mut write_buf = BytesMut::new();
+    let mut req_stats = RequestStats::default();
     for (key, entry) in buf {
         if entry.is_empty() {
             continue;
@@ -397,7 +399,7 @@ pub fn write_file(
             *thread_id.as_ref(),
             org_id,
             stream_name,
-            StreamType::Logs,
+            stream_type,
             &key,
             CONFIG.common.wal_memory_mode_enabled,
         );
@@ -405,12 +407,23 @@ pub fn write_file(
             *stream_file_name = file.full_name();
         }
         file.write(write_buf.as_ref());
+
+        // metrics
+        metrics::INGEST_RECORDS
+            .with_label_values(&[org_id, stream_name, stream_type.to_string().as_str()])
+            .inc_by(entry.len() as u64);
+        metrics::INGEST_BYTES
+            .with_label_values(&[org_id, stream_name, stream_type.to_string().as_str()])
+            .inc_by(write_buf.len() as u64);
+        RequestStats {
+            size: write_buf.len() as f64,
+            records: write_buf.len() as u64,
+            response_time: 0.0,
+        };
+        req_stats.size += write_buf.len() as f64;
+        req_stats.records += entry.len() as u64;
     }
-    RequestStats {
-        size: write_buf.len() as f64,
-        records: write_buf.len() as u64,
-        response_time: 0.0,
-    }
+    req_stats
 }
 
 #[cfg(test)]

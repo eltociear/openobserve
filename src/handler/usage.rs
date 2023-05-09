@@ -5,7 +5,7 @@ use std::{
 
 use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpMessage,
+    Error,
 };
 
 #[doc(hidden)]
