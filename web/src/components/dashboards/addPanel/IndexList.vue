@@ -88,9 +88,11 @@
               @dragover="onDragOver"
               @drop="onDrop"
             >
-              <div class="field_overlay" :title="props.row.name">
+              <div 
+                class="field_overlay" :title="props.row.name"
+                :data-test="`field-list-item-${dashboardPanelData.data.fields.stream_type}-${dashboardPanelData.data.fields.stream}-${props.row.name}`"
+              >
                 <div
-                  :data-test="`field-list-item-${dashboardPanelData.data.fields.stream_type}-${dashboardPanelData.data.fields.stream}-${props.row.name}`"
                   class="field_label"
                   draggable="true"
                   @dragstart="onDragStart($event, props.row)"
@@ -128,6 +130,7 @@
                     color="white"
                     padding="sm"
                     text-color="black"
+                    data-test="dashboard-add-y-data"
                     :disabled="isAddYAxisNotAllowed"
                     @click="addYAxisItem(props.row)"
                   >
