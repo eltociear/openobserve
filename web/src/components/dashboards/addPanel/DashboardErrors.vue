@@ -1,5 +1,5 @@
 <template>
-  <div v-if="props.errors.errors.length">
+  <div v-if="props.errors.errors.length" :data-cy="`dashboard-error`">
     <q-separator />
     <div>
       <q-bar class="row q-pa-sm expand-bar">

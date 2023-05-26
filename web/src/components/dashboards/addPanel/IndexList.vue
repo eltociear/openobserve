@@ -102,6 +102,7 @@
                     color="grey-13"
                     class="drag_indicator q-mr-xs"
                     v-if="!promqlMode"
+                    data-test="dashboard-add-data-indicator"
                   />
 
                   <q-icon

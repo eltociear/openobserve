@@ -32,12 +32,12 @@
         @dragleave="onDragLeave($event, 'x')"
         @dragover="onDragOver($event, 'x')"
         @drop="onDrop($event, 'x')"
-        v-mutation="handler2">
+        v-mutation="handler2" data-test="dashboard-x-layout">
         <q-btn-group class="q-mr-sm" v-for="(itemX,index) in dashboardPanelData.data.fields.x" :key="index">
           <q-btn  
             icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm"
-            :label="itemX.column" class="q-pl-sm">
-              <q-menu class="q-pa-md">
+            :label="itemX.column" class="q-pl-sm" :data-test="`dashboard-x-item-${itemX.column}`">
+              <q-menu class="q-pa-md" :data-test="`dashboard-x-item-${itemX.column}-menu`">
                 <div>
                   <div class="">
                     <div v-if="!dashboardPanelData.data.customQuery" class="q-mr-xs q-mb-sm">
@@ -52,6 +52,7 @@
                         emit-value
                         map-options
                         label="Aggregation"
+                        data-test="dashboard-x-item-dropdown"
                       >
                         <template v-slot:append>
                           <q-icon name="close" size="small" @click.stop.prevent="dashboardPanelData.data.fields.x[index].aggregationFunction = null" class="cursor-pointer" />
@@ -108,7 +109,7 @@
         @dragleave="onDragLeave($event, 'y')"
         @dragover="onDragOver($event, 'y')"
         @drop="onDrop($event, 'y')"
-        v-mutation="handler2">
+        v-mutation="handler2" data-test="dashboard-y-layout">
         <q-btn-group class="q-mr-sm" v-for="(itemY,index) in dashboardPanelData.data.fields.y" :key="index">
           <q-btn icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm"
             :label="itemY.column" class="q-pl-sm">
@@ -180,7 +181,7 @@
         @dragleave="onDragLeave($event, 'f')"
         @dragover="onDragOver($event, 'f')"
         @drop="onDrop($event, 'f')"
-        v-mutation="handler2">
+        v-mutation="handler2" data-test="dashboard-filter-layout">
         <q-btn-group class="q-mr-sm" v-for="(filteredItem,index) in dashboardPanelData.data.fields.filter" :key="index">
         <q-btn icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm" :label="filteredItem.column"  class="q-pl-sm">
           <q-menu class="q-pa-md">
