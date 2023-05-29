@@ -63,6 +63,7 @@
                   <q-input
                     dense
                     filled
+                    data-test="dashboard-x-item-input"
                     label="Label"
                     v-model="
                       dashboardPanelData.data.fields.x[index]
@@ -78,6 +79,7 @@
             round
             flat
             dense
+            :data-test="`dashboard-x-item-${itemX.column}-remove`"
             @click="removeXAxisItem(itemX.column)"
             icon="close"
           />
@@ -112,8 +114,8 @@
         v-mutation="handler2" data-test="dashboard-y-layout">
         <q-btn-group class="q-mr-sm" v-for="(itemY,index) in dashboardPanelData.data.fields.y" :key="index">
           <q-btn icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm"
-            :label="itemY.column" class="q-pl-sm">
-            <q-menu class="q-pa-md">
+            :label="itemY.column" :data-test="`dashboard-y-item-${itemY.column}`" class="q-pl-sm">
+            <q-menu class="q-pa-md" :data-test="`dashboard-y-item-${itemY.column}-menu`">
                 <div>
                   <div class="row q-mb-sm" style="align-items: center;">
                     <div v-if="!dashboardPanelData.data.customQuery" class="q-mr-xs" style="width: 160px">
@@ -128,11 +130,13 @@
                         emit-value
                         map-options
                         label="Aggregation"
+                        data-test="dashboard-y-item-dropdown"
                       ></q-select>
                     </div>
                     <div class="color-input-wrapper" v-if="!['table', 'pie'].includes(dashboardPanelData.data.type)">
                       <input
                         type="color"
+                        data-test="dashboard-y-item-color"
                         v-model="
                           dashboardPanelData.data.fields.y[index]
                             .color
@@ -144,6 +148,7 @@
                     dense
                     filled
                     label="Label"
+                    data-test="dashboard-y-item-input"
                     v-model="
                       dashboardPanelData.data.fields.y[index]
                         .label
@@ -158,6 +163,7 @@
             round
             flat
             dense
+            data-test="dashboard-y-item-remove"
             @click="removeYAxisItem(itemY.column)"
             icon="close"
           />
@@ -183,8 +189,8 @@
         @drop="onDrop($event, 'f')"
         v-mutation="handler2" data-test="dashboard-filter-layout">
         <q-btn-group class="q-mr-sm" v-for="(filteredItem,index) in dashboardPanelData.data.fields.filter" :key="index">
-        <q-btn icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm" :label="filteredItem.column"  class="q-pl-sm">
-          <q-menu class="q-pa-md">
+        <q-btn icon-right="arrow_drop_down" no-caps dense color="primary" rounded size="sm" :label="filteredItem.column" :data-test="`dashboard-filter-item-${filteredItem.column}`" class="q-pl-sm">
+          <q-menu class="q-pa-md" :data-test="`dashboard-filter-item-${filteredItem.column}-menu`">
               <div>
                 <div class="q-pa-xs">
                   <div class="q-gutter-xs">
@@ -200,12 +206,14 @@
                         name="list"
                         label="List"
                         style="width: auto"
+                        data-test="dashboard-filter-list-tab"
                       ></q-tab>
                       <q-tab
                         dense
                         name="condition"
                         label="Condition"
                         style="width: auto"
+                        data-test="dashboard-filter-condition-tab"
                       ></q-tab>
                     </q-tabs>
                     <q-separator></q-separator>
@@ -217,7 +225,7 @@
                       "
                       animated
                     >
-                      <q-tab-panel dense name="condition" class="q-pa-none">
+                      <q-tab-panel data-test="dashboard-filter-condition-panel" dense name="condition" class="q-pa-none">
                         <div class="flex justify-between">
                           <q-select
                             dense
@@ -229,6 +237,7 @@
                             "
                             :options="options"
                             label="Operator"
+                            data-test="dashboard-filter-condition-dropdown"
                             style="width: 100%"
                             :rules="[ val => !!val || 'Required' ]"
                           />
@@ -243,13 +252,14 @@
                                 index
                               ].value
                             "
+                            data-test="dashboard-filter-condition-input"
                             label="Value"
                             style="width: 100%; margin-top: 5px"
                             :rules="[ val => val.length > 0 || 'Required' ]"
                           />
                         </div>
                       </q-tab-panel>
-                      <q-tab-panel dense name="list" class="q-pa-none">
+                      <q-tab-panel data-test="dashboard-filter-list-panel" dense name="list" class="q-pa-none">
                         <q-select
                           dense
                           filled
@@ -258,6 +268,7 @@
                               index
                             ].values
                           "
+                          data-test="dashboard-filter-list-dropdown"
                           :options="dashboardPanelData.meta.filterValue.find((it: any)=>it.column == filteredItem.column)?.value"
                           label="Select Filter"
                           multiple

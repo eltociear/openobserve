@@ -16,7 +16,7 @@
 <template>
   <div>
     <q-bar class="row sql-bar">
-      <div style="flex: 1;" @click="onDropDownClick">
+      <div style="flex: 1;" @click="onDropDownClick" data-test="dashboard-query-data">
         <q-icon
           flat
           :name="!showQuery ? 'arrow_right' : 'arrow_drop_down'"
@@ -34,6 +34,7 @@
   <div class="row" 
     :style="!showQuery ? 'height: 0px;' : 'height: auto;'"
     style="overflow: hidden;">
+    <div style="display: none;" data-test="dashboard-query">{{ dashboardPanelData.data.query }}</div>
     <div class="col">
       <query-editor
       ref="queryEditorRef"

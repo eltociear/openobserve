@@ -145,6 +145,7 @@
                     color="white"
                     padding="sm"
                     text-color="black"
+                    data-test="dashboard-add-filter-data"
                     @click="addFilteredItem(props.row.name)"
                   >
                     <div>+F</div>
