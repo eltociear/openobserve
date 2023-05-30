@@ -14,7 +14,7 @@
 -->
 
 <template>
-  <div>
+  <div data-test="dashboard-panel-searchbar">
     <q-bar class="row sql-bar">
       <div style="flex: 1;" @click="onDropDownClick" data-test="dashboard-query-data">
         <q-icon
@@ -37,6 +37,7 @@
     <div style="display: none;" data-test="dashboard-query">{{ dashboardPanelData.data.query }}</div>
     <div class="col">
       <query-editor
+      data-test="dashboard-panel-query-editor"
       ref="queryEditorRef"
       class="monaco-editor"
       v-model:query="dashboardPanelData.data.query"
