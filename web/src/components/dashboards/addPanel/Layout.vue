@@ -314,6 +314,7 @@
                                 <q-checkbox
                                   dense
                                   :model-value="selected"
+                                  data-test="dashboard-filter-item-input"
                                   @update:model-value="toggleOption(opt)"
                                 ></q-checkbox>
                               </q-item-section>
