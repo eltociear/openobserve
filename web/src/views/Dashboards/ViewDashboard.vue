@@ -46,8 +46,8 @@
       </div>
     </div>
     <q-separator></q-separator>
-    <div class="displayDiv">
-      <grid-layout v-if="list[0].panels?.length > 0" v-model:layout.sync="list[0].layouts" :col-num="12" :row-height="30"
+    <div class="displayDiv" data-test="panels-grid">
+      <grid-layout  v-if="list[0].panels?.length > 0" v-model:layout.sync="list[0].layouts" :col-num="12" :row-height="30"
         :is-draggable="draggable" :is-resizable="draggable" :vertical-compact="true" :autoSize="true"
         :restore-on-drag="true" :use-css-transforms="true" @layout-created="layoutCreatedEvent"
         @layout-before-mount="layoutBeforeMountEvent" @layout-mounted="layoutMountedEvent"

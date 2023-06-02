@@ -30,7 +30,7 @@
           </q-item>
           <q-item clickable v-close-popup @click="onPanelModifyClick('DeletePanel')">
             <q-item-section>
-              <q-item-label class="q-pa-sm">Delete Panel</q-item-label>
+              <q-item-label data-test="dashboard-delete-panel" class="q-pa-sm">Delete Panel</q-item-label>
             </q-item-section>
           </q-item>
         </q-list>

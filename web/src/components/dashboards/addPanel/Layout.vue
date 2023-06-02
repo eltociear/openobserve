@@ -163,7 +163,7 @@
             round
             flat
             dense
-            data-test="dashboard-y-item-remove"
+            :data-test="`dashboard-y-item-${itemY.column}-remove`"
             @click="removeYAxisItem(itemY.column)"
             icon="close"
           />
