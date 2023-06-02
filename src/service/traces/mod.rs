@@ -182,7 +182,7 @@ pub async fn handle_trace_request(
                     operation_name: span.name.clone(),
                     start_time,
                     end_time,
-                    duration: (end_time - start_time) / 1000000.00,
+                    duration: (end_time - start_time) as f64 / 1000000.00,
                     reference: span_ref,
                     service_name: service_name.clone(),
                     attributes: span_att_map,

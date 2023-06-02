@@ -15,6 +15,7 @@ pub struct UsageData {
     pub user_email: String,
     pub response_time: f64,
     pub stream_type: StreamType,
+    pub num_records: u64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -29,6 +30,8 @@ pub enum UsageEvent {
     Functions,
     Retention,
     KinesisFirehose,
+    Syslog,
+    EnrichmentTable,
 }
 
 impl ToString for UsageEvent {
@@ -43,6 +46,8 @@ impl ToString for UsageEvent {
             UsageEvent::Functions => "functions".to_owned(),
             UsageEvent::Retention => "data_retention".to_owned(),
             UsageEvent::KinesisFirehose => "_kinesis_firehose".to_owned(),
+            UsageEvent::Syslog => "syslog".to_owned(),
+            UsageEvent::EnrichmentTable => "enrichment_table".to_owned(),
         }
     }
 }

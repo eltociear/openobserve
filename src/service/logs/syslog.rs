@@ -23,16 +23,18 @@ use syslog_loose::{Message, ProcId, Protocol};
 use super::StreamMeta;
 use crate::common::json;
 use crate::common::time::parse_timestamp_micro_from_value;
+use crate::infra::cluster;
 use crate::infra::config::{CONFIG, SYSLOG_ROUTES};
-use crate::infra::{cluster, metrics};
 use crate::meta::alert::{Alert, Trigger};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::{IngestionResponse, RecordStatus, StreamSchemaChk, StreamStatus};
 use crate::meta::syslog::SyslogRoute;
+use crate::meta::usage::UsageEvent;
 use crate::meta::StreamType;
 use crate::service::db;
 use crate::service::ingestion::write_file;
 use crate::service::schema::stream_schema_exists;
+use crate::service::usage::report_ingest_stats;
 
 pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
     let start = Instant::now();
@@ -179,31 +181,22 @@ pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
     if local_trigger.is_some() {
         trigger = Some(local_trigger.unwrap());
     }
-
-    write_file(buf, thread_id, org_id, stream_name, StreamType::Logs);
+    let mut stream_file_name = "".to_string();
+    write_file(
+        buf,
+        thread_id,
+        org_id,
+        stream_name,
+        &mut stream_file_name,
+        StreamType::Logs,
+    );
 
     // only one trigger per request, as it updates etcd
     super::evaluate_trigger(trigger, stream_alerts_map).await;
 
-    let time = start.elapsed().as_secs_f64();
-    metrics::HTTP_RESPONSE_TIME
-        .with_label_values(&[
-            "/_json",
-            "200",
-            org_id,
-            stream_name,
-            StreamType::Logs.to_string().as_str(),
-        ])
-        .observe(time);
-    metrics::HTTP_INCOMING_REQUESTS
-        .with_label_values(&[
-            "/_json",
-            "200",
-            org_id,
-            stream_name,
-            StreamType::Logs.to_string().as_str(),
-        ])
-        .inc();
+    /*     req_stats.response_time = start.elapsed().as_secs_f64();
+    //metric + data usage
+    report_ingest_stats(&req_stats, org_id, StreamType::Logs, UsageEvent::Syslog).await; */
 
     Ok(HttpResponse::Ok().json(IngestionResponse::new(
         http::StatusCode::OK.into(),

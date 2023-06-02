@@ -40,6 +40,7 @@ pub async fn report_ingest_stats(
         unit: "bytes".to_owned(),
         user_email: "".to_owned(),
         response_time: stats.response_time,
+        num_records: stats.records,
         stream_type,
     }];
     let json_str = serde_json::to_string(&usage).unwrap();
