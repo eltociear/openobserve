@@ -49,10 +49,6 @@ use crate::meta::functions::VRLRuntimeConfig;
 
 use crate::meta::StreamType;
 use crate::{
-    common::json::{Map, Value},
-    infra::config::CONFIG,
-};
-use crate::{
     common::notification::send_notification,
     infra::config::STREAM_ALERTS,
     meta::alert::{Alert, Trigger},
@@ -321,7 +317,7 @@ pub async fn chk_schema_by_record(
     .unwrap();
 }
 
-pub fn write_file(
+pub fn _write_file(
     buf: AHashMap<String, Vec<String>>,
     thread_id: actix_web::web::Data<usize>,
     org_id: &str,

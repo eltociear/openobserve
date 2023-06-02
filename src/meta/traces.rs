@@ -27,7 +27,7 @@ pub struct Span {
     pub operation_name: String,
     pub start_time: u64,
     pub end_time: u64,
-    pub duration: u64,
+    pub duration: f64,
     #[serde(flatten)]
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub reference: AHashMap<String, String>,

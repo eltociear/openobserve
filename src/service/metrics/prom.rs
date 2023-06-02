@@ -36,14 +36,15 @@ use crate::{
         self,
         alert::{Alert, Trigger},
         prom::{self, HASH_LABEL, METADATA_LABEL, NAME_LABEL, VALUE_LABEL},
-        usage::UsageEvent,
+        usage::{RequestStats, UsageEvent},
         StreamType,
     },
     service::{
         db,
-        ingestion::chk_schema_by_record,
+        ingestion::{chk_schema_by_record, write_file},
         schema::{set_schema_metadata, stream_schema_exists},
         search as search_service,
+        usage::report_ingest_stats,
     },
 };
 
