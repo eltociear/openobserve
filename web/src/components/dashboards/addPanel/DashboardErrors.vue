@@ -12,7 +12,7 @@
     </div>
     <div class="row" :style="!showErrors ? 'height: 0px;' : 'height: auto;'" style="overflow: hidden;">
       <div class="col">
-        <div>
+        <div data-test="dashboard-error">
           <ul>
             <li v-for="(item, index) in props.errors.errors" :key="index" style="color:red;">{{ item }}</li>
           </ul>
