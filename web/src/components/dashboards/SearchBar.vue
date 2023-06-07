@@ -142,13 +142,13 @@ export default defineComponent({
           } else {
             selector += `${field.column}`
           }
-          selector += ` as "${field.alias}"${i==fields.length-1 ? ' ' : ', '}`
+          selector += ` as "${field.alias}"${i==fields.length-1 ? '' : ', '}`
           return selector
         })
         query += array.join("")
 
         // now add from stream name
-        query += ` FROM "${dashboardPanelData.data.fields.stream}" `
+        query += ` FROM "${dashboardPanelData.data.fields.stream}"`
 
         const filterData = filter?.map((field, i)=>{
           let selectFilter = ""
@@ -193,7 +193,7 @@ export default defineComponent({
         // console.log("query: filterData",filterData);
         const filterItems = filterData.filter((it: any)=> it)
         if(filterItems.length > 0) {
-          query += "WHERE " + filterItems.join(" AND ")
+          query += " WHERE " + filterItems.join(" AND ")
         }
 
         // add group by statement
