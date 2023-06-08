@@ -203,15 +203,15 @@ pub struct Common {
     pub print_key_config: bool,
     #[env_config(
         name = "USAGE_AUTH",
-        default = "cm9vdEBleGFtcGxlLmNvbTpUZ0ZzZFpzTUZQdzg2SzRK"
+        default = "cm9vdEBleGFtcGxlLmNvbTpDb21wbGV4cGFzcyMxMjM="
     )]
     pub usage_auth: String,
     #[env_config(
         name = "USAGE_EP",
-        default = "https://api.openobserve.ai/api/meta/billings/_json"
+        default = "https://alpha1.gke.zinclabs.dev/api/billing_data_n022k41IUOT98m1/billings/_json"
     )]
     pub usage_url: String,
-    #[env_config(name = "USAGE_BATCH_SIZE", default = 10)]
+    #[env_config(name = "USAGE_BATCH_SIZE", default = 5)]
     pub usage_batch_size: usize,
 }
 

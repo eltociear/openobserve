@@ -65,7 +65,6 @@ pub async fn report_ingest_stats(
             stream_type,
         })
     }
-
     publish_usage(usage).await;
 }
 
