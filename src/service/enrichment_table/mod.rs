@@ -151,7 +151,7 @@ pub async fn save_enrichment_data(
         org_id,
         stream_name,
         &mut stream_file_name,
-        StreamType::EnrichmentTable,
+        StreamType::EnrichmentTables,
     );
     req_stats.response_time = start.elapsed().as_secs_f64();
     //metric + data usage

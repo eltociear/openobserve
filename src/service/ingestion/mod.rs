@@ -14,7 +14,7 @@
 
 use crate::{
     common::json::{Map, Value},
-    infra::config::CONFIG,
+    infra::{config::CONFIG, wal::get_or_create},
     meta::usage::RequestStats,
 };
 use ahash::AHashMap;
@@ -391,7 +391,7 @@ pub fn write_file(
             write_buf.put(row.as_bytes());
             write_buf.put("\n".as_bytes());
         }
-        let file = crate::infra::file_lock::get_or_create(
+        let file = get_or_create(
             *thread_id.as_ref(),
             org_id,
             stream_name,

@@ -20,7 +20,6 @@ use datafusion::arrow::datatypes::Schema;
 use promql_parser::label::MatchOp;
 use promql_parser::parser;
 use prost::Message;
-use rustc_hash::FxHashSet;
 use std::{collections::HashMap, io, time::Instant};
 
 use crate::{
@@ -30,7 +29,6 @@ use crate::{
         cluster,
         config::{CONFIG, METRIC_CLUSTER_LEADER, METRIC_CLUSTER_MAP},
         errors::{Error, Result},
-        file_lock, metrics,
     },
     meta::{
         self,
@@ -318,61 +316,32 @@ pub async fn remote_write(
             }
         }
     }
-
+    let mut final_req_stats = RequestStats::default();
     for (metric_name, metric_data) in metric_data_map {
         // write to file
-        let mut write_buf = BytesMut::new();
-        for (key, entry) in metric_data {
-            if entry.is_empty() {
-                continue;
-            }
+        let mut stream_file_name = "".to_string();
 
-            // check if we are allowed to ingest
-            if db::compact::delete::is_deleting_stream(
-                org_id,
-                &metric_name,
-                StreamType::Metrics,
-                None,
-            ) {
-                return Ok(HttpResponse::InternalServerError().json(
-                    meta::http::HttpResponse::error(
-                        http::StatusCode::INTERNAL_SERVER_ERROR.into(),
-                        format!("stream [{metric_name}] is being deleted"),
-                    ),
-                ));
-            }
-
-            write_buf.clear();
-            for row in &entry {
-                write_buf.put(row.as_bytes());
-                write_buf.put("\n".as_bytes());
-            }
-            let file = file_lock::get_or_create(
-                *thread_id.as_ref(),
-                org_id,
-                &metric_name,
-                StreamType::Metrics,
-                &key,
-                CONFIG.common.wal_memory_mode_enabled,
+        // check if we are allowed to ingest
+        if db::compact::delete::is_deleting_stream(org_id, &metric_name, StreamType::Metrics, None)
+        {
+            return Ok(
+                HttpResponse::InternalServerError().json(meta::http::HttpResponse::error(
+                    http::StatusCode::INTERNAL_SERVER_ERROR.into(),
+                    format!("stream [{metric_name}] is being deleted"),
+                )),
             );
-            file.write(write_buf.as_ref());
-
-            // metrics
-            metrics::INGEST_RECORDS
-                .with_label_values(&[
-                    org_id,
-                    &metric_name,
-                    StreamType::Metrics.to_string().as_str(),
-                ])
-                .inc_by(entry.len() as u64);
-            metrics::INGEST_BYTES
-                .with_label_values(&[
-                    org_id,
-                    &metric_name,
-                    StreamType::Metrics.to_string().as_str(),
-                ])
-                .inc_by(write_buf.len() as u64);
         }
+
+        final_req_stats = write_file(
+            metric_data,
+            thread_id.clone(),
+            org_id,
+            &metric_name,
+            &mut stream_file_name,
+            StreamType::Logs,
+        );
+        final_req_stats.size += final_req_stats.size;
+        final_req_stats.records += final_req_stats.records;
 
         let _schema_exists = stream_schema_exists(
             org_id,
