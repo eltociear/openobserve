@@ -160,6 +160,7 @@ pub async fn save_enrichment_data(
         org_id,
         StreamType::Logs,
         UsageEvent::EnrichmentTable,
+        0,
     )
     .await;
 

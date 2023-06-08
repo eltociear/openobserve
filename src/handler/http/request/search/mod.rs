@@ -26,8 +26,10 @@ use crate::common::json;
 use crate::infra::config::CONFIG;
 use crate::infra::{errors, metrics};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
+use crate::meta::usage::{RequestStats, UsageEvent};
 use crate::meta::{self, StreamType};
 use crate::service::search as SearchService;
+use crate::service::usage::report_ingest_stats;
 
 /** SearchStreamData*/
 #[utoipa::path(
@@ -154,6 +156,21 @@ pub async fn search(
                 ])
                 .inc();
             res.set_local_took(start.elapsed().as_millis() as usize, took_wait);
+
+            let req_stats = RequestStats {
+                records: res.hits.len() as u64,
+                response_time: time,
+                size: res.scan_size as f64,
+            };
+            let num_fn = req.query.query_fn.is_some() as u16;
+            report_ingest_stats(
+                &req_stats,
+                &org_id,
+                StreamType::Logs,
+                UsageEvent::Search,
+                num_fn,
+            )
+            .await;
             Ok(HttpResponse::Ok().json(res))
         }
         Err(err) => {
@@ -177,6 +194,7 @@ pub async fn search(
                 ])
                 .inc();
             log::error!("search error: {:?}", err);
+
             Ok(match err {
                 errors::Error::ErrorCode(code) => HttpResponse::InternalServerError()
                     .json(meta::http::HttpResponse::error_code(code)),
@@ -427,6 +445,21 @@ pub async fn around(
         ])
         .inc();
 
+    let req_stats = RequestStats {
+        records: resp.hits.len() as u64,
+        response_time: time,
+        size: resp.scan_size as f64,
+    };
+    let num_fn = req.query.query_fn.is_some() as u16;
+    report_ingest_stats(
+        &req_stats,
+        &org_id,
+        StreamType::Logs,
+        UsageEvent::SearchAround,
+        num_fn,
+    )
+    .await;
+
     Ok(HttpResponse::Ok().json(resp))
 }
 
@@ -616,6 +649,21 @@ pub async fn values(
             stream_type.to_string().as_str(),
         ])
         .inc();
+
+    let req_stats = RequestStats {
+        records: resp.hits.len() as u64,
+        response_time: time,
+        size: resp.scan_size as f64,
+    };
+    let num_fn = req.query.query_fn.is_some() as u16;
+    report_ingest_stats(
+        &req_stats,
+        &org_id,
+        StreamType::Logs,
+        UsageEvent::SearchTopNValues,
+        num_fn,
+    )
+    .await;
 
     Ok(HttpResponse::Ok().json(resp))
 }

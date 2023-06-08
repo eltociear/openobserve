@@ -24,9 +24,9 @@ use crate::common::json;
 use crate::infra::cluster;
 use crate::infra::config::CONFIG;
 use crate::meta::alert::Alert;
-#[cfg(feature = "zo_functions")]
+
 use crate::meta::functions::StreamTransform;
-#[cfg(feature = "zo_functions")]
+
 use crate::meta::functions::VRLRuntimeConfig;
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::{
@@ -68,14 +68,14 @@ pub async fn ingest(
 
     let mut min_ts =
         (Utc::now() + Duration::hours(CONFIG.limit.ingest_allowed_upto)).timestamp_micros();
-    #[cfg(feature = "zo_functions")]
+
     let mut runtime = crate::service::ingestion::init_functions_runtime();
-    #[cfg(feature = "zo_functions")]
+
     let mut stream_vrl_map: AHashMap<String, VRLRuntimeConfig> = AHashMap::new();
     let mut stream_schema_map: AHashMap<String, Schema> = AHashMap::new();
     let mut stream_data_map = AHashMap::new();
-    #[cfg(feature = "zo_functions")]
-    let mut stream_tansform_map: AHashMap<String, Vec<StreamTransform>> = AHashMap::new();
+
+    let mut stream_transform_map: AHashMap<String, Vec<StreamTransform>> = AHashMap::new();
     let mut stream_partition_keys_map: AHashMap<String, (StreamSchemaChk, Vec<String>)> =
         AHashMap::new();
     let mut stream_alerts_map: AHashMap<String, Vec<Alert>> = AHashMap::new();
@@ -92,10 +92,9 @@ pub async fn ingest(
         if line.is_empty() {
             continue;
         }
-        #[cfg(feature = "zo_functions")]
+
         let value: json::Value = json::from_slice(line.as_bytes())?;
-        #[cfg(not(feature = "zo_functions"))]
-        let value: json::Value = json::from_slice(line.as_bytes())?;
+
         if !next_line_is_data {
             // check bulk operate
             let ret = super::parse_bulk_index(&value);
@@ -106,12 +105,12 @@ pub async fn ingest(
             next_line_is_data = true;
 
             // Start Register Transfoms for stream
-            #[cfg(feature = "zo_functions")]
+
             crate::service::ingestion::get_stream_transforms(
                 org_id,
                 StreamType::Logs,
                 &stream_name,
-                &mut stream_tansform_map,
+                &mut stream_transform_map,
                 &mut stream_vrl_map,
             )
             .await;
@@ -154,14 +153,13 @@ pub async fn ingest(
             let buf = &mut stream_data.data;
 
             //Start row based transform
-            #[cfg(feature = "zo_functions")]
+
             let key = format!("{org_id}/{}/{stream_name}", StreamType::Logs);
 
             //JSON Flattening
             let mut value = json::flatten_json_and_format_field(&value);
 
-            #[cfg(feature = "zo_functions")]
-            if let Some(transforms) = stream_tansform_map.get(&key) {
+            if let Some(transforms) = stream_transform_map.get(&key) {
                 let mut ret_value = value.clone();
                 ret_value = crate::service::ingestion::apply_stream_transform(
                     transforms,
@@ -300,7 +298,7 @@ pub async fn ingest(
         // write to file
         let mut stream_file_name = "".to_string();
 
-        final_req_stats = write_file(
+        let req_stats = write_file(
             stream_data.data,
             thread_id.clone(),
             org_id,
@@ -308,8 +306,12 @@ pub async fn ingest(
             &mut stream_file_name,
             StreamType::Logs,
         );
-        final_req_stats.size += final_req_stats.size;
-        final_req_stats.records += final_req_stats.records;
+        println!(
+            " stream_name: {}, file_name: {}, req_stats: {:?}",
+            stream_name, stream_file_name, req_stats
+        );
+        final_req_stats.size += req_stats.size;
+        final_req_stats.records += req_stats.records;
     }
 
     // only one trigger per request, as it updates etcd
@@ -320,7 +322,15 @@ pub async fn ingest(
     let time = start.elapsed().as_secs_f64();
     final_req_stats.response_time += time;
     //metric + data usage
-    report_ingest_stats(&final_req_stats, org_id, StreamType::Logs, UsageEvent::Bulk).await;
+    let fns_length: usize = stream_transform_map.values().map(|v| v.len()).sum();
+    report_ingest_stats(
+        &final_req_stats,
+        org_id,
+        StreamType::Logs,
+        UsageEvent::Bulk,
+        fns_length as u16,
+    )
+    .await;
     bulk_res.took = start.elapsed().as_millis();
 
     Ok(HttpResponse::Ok().json(bulk_res))

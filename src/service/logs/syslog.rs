@@ -29,15 +29,13 @@ use crate::meta::alert::{Alert, Trigger};
 use crate::meta::http::HttpResponse as MetaHttpResponse;
 use crate::meta::ingestion::{IngestionResponse, RecordStatus, StreamSchemaChk, StreamStatus};
 use crate::meta::syslog::SyslogRoute;
-use crate::meta::usage::UsageEvent;
 use crate::meta::StreamType;
 use crate::service::db;
 use crate::service::ingestion::write_file;
 use crate::service::schema::stream_schema_exists;
-use crate::service::usage::report_ingest_stats;
 
 pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
-    let start = Instant::now();
+    let _start = Instant::now();
     let ip = addr.ip();
     let matching_route = get_org_for_ip(ip).await;
 
@@ -91,7 +89,7 @@ pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
     let mut trigger: Option<Trigger> = None;
 
     // Start Register Transforms for stream
-    /*  #[cfg(feature = "zo_functions")]
+    /*
     let (local_tans, _, stream_vrl_map) = crate::service::ingestion::register_stream_transforms(
         org_id,
         stream_name,
@@ -125,7 +123,7 @@ pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
     let mut value = message_to_value(parsed_msg);
     value = json::flatten_json_and_format_field(&value);
 
-    /* #[cfg(feature = "zo_functions")]
+    /*
     let mut value = crate::service::ingestion::apply_stream_transform(
         &local_tans,
         &value,
@@ -135,7 +133,7 @@ pub async fn ingest(msg: &str, addr: SocketAddr) -> Result<HttpResponse, ()> {
         stream_name,
         &mut runtime,
     );
-    #[cfg(feature = "zo_functions")]
+
     if value.is_null() || !value.is_object() {
         stream_status.status.failed += 1; // transform failed or dropped
     } */

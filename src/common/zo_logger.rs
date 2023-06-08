@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use cloudevents::{Event, EventBuilder, EventBuilderV10};
-
 use log::{Metadata, Record};
 use once_cell::sync::Lazy;
 use reqwest::Client;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 
@@ -63,13 +61,13 @@ impl log::Log for ZoLogger {
 
 pub async fn send_logs() {
     let mut event_receiver_rx = EVENT_SENDER.subscribe();
-    let cl = Arc::new(Client::builder().build().unwrap());
 
     while let Ok(val) = event_receiver_rx.recv().await {
         let mut logs = LOGS.write().await;
         logs.push(val);
 
         if logs.len() >= CONFIG.log.events_batch_size {
+            let cl = Arc::new(Client::builder().build().unwrap());
             let old_logs = std::mem::take(&mut *logs);
             let url = url::Url::parse(&CONFIG.log.events_url).unwrap();
             let auth = format!("Basic {}", &CONFIG.log.events_auth);

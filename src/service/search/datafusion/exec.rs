@@ -42,7 +42,7 @@ use regex::Regex;
 use std::{sync::Arc, time::Instant};
 
 use super::storage::{file_list, StorageType};
-#[cfg(feature = "zo_functions")]
+ 
 use super::transform_udf::get_all_transform;
 use crate::common::json;
 use crate::infra::{cache::tmpfs, config::CONFIG};
@@ -841,7 +841,7 @@ async fn register_udf(ctx: &mut SessionContext, _org_id: &str) {
     ctx.register_udf(super::regexp_udf::REGEX_NOT_MATCH_UDF.clone());
     ctx.register_udf(super::time_range_udf::TIME_RANGE_UDF.clone());
     ctx.register_udf(super::date_format_udf::DATE_FORMAT_UDF.clone());
-    #[cfg(feature = "zo_functions")]
+     
     {
         let udf_list = get_all_transform(_org_id).await;
         for udf in udf_list {
@@ -944,16 +944,9 @@ pub async fn register_table(
     Ok((ctx, schema))
 }
 
-#[cfg(not(feature = "zo_functions"))]
-fn handle_query_fn(
-    _query_fn: String,
-    _batches: Vec<RecordBatch>,
-    _org_id: &str,
-) -> Option<Vec<RecordBatch>> {
-    None
-}
 
-#[cfg(feature = "zo_functions")]
+
+ 
 fn handle_query_fn(
     query_fn: String,
     batches: Vec<RecordBatch>,
@@ -965,7 +958,7 @@ fn handle_query_fn(
     }
 }
 
-#[cfg(feature = "zo_functions")]
+ 
 fn apply_query_fn(
     query_fn_src: String,
     in_batch: Vec<json::Map<String, json::Value>>,

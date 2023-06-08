@@ -1,21 +1,26 @@
-use actix_web::web;
 use chrono::{Datelike, Timelike, Utc};
+use once_cell::sync::Lazy;
+use reqwest::Client;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use crate::{
-    infra::metrics,
+    infra::{config::CONFIG, metrics},
     meta::{
         usage::{RequestStats, UsageData, UsageEvent},
         StreamType,
     },
 };
 
-use super::logs::json;
+pub static USAGE_DATA: Lazy<Arc<RwLock<Vec<UsageData>>>> =
+    Lazy::new(|| Arc::new(RwLock::new(vec![])));
 
 pub async fn report_ingest_stats(
     stats: &RequestStats,
     org_id: &str,
     stream_type: StreamType,
     event: UsageEvent,
+    num_functions: u16,
 ) {
     let local_stream_type = stream_type.to_string();
     // metrics
@@ -27,28 +32,61 @@ pub async fn report_ingest_stats(
         .inc();
 
     let now = Utc::now();
-
-    let usage = vec![UsageData {
+    let mut usage = vec![UsageData {
         event,
         day: now.day(),
         hour: now.hour(),
         month: now.month(),
-        year: now.year() as i32,
+        year: now.year(),
         organization_identifier: org_id.to_owned(),
         request_body: "".to_owned(),
         size: stats.size,
-        unit: "bytes".to_owned(),
+        unit: "MB".to_owned(),
         user_email: "".to_owned(),
         response_time: stats.response_time,
         num_records: stats.records,
         stream_type,
     }];
-    let json_str = serde_json::to_string(&usage).unwrap();
-    let _ = json::ingest(
-        "_meta",
-        "usage",
-        actix_web::web::Bytes::from(json_str),
-        web::Data::new(0),
-    )
-    .await;
+
+    if num_functions > 0 {
+        usage.push(UsageData {
+            event,
+            day: now.day(),
+            hour: now.hour(),
+            month: now.month(),
+            year: now.year(),
+            organization_identifier: org_id.to_owned(),
+            request_body: "".to_owned(),
+            size: stats.size,
+            unit: "MB".to_owned(),
+            user_email: "".to_owned(),
+            response_time: stats.response_time,
+            num_records: stats.records * num_functions as u64,
+            stream_type,
+        })
+    }
+
+    publish_usage(usage).await;
+}
+
+pub async fn publish_usage(mut usage: Vec<UsageData>) {
+    let mut usages = USAGE_DATA.write().await;
+    usages.append(&mut usage);
+
+    if usages.len() >= CONFIG.common.usage_batch_size {
+        let cl = Arc::new(Client::builder().build().unwrap());
+        let curr_usage = std::mem::take(&mut *usages);
+        let url = url::Url::parse(&CONFIG.common.usage_url).unwrap();
+        let auth = format!("Basic {}", &CONFIG.common.usage_auth);
+        let cl = Arc::clone(&cl);
+        tokio::task::spawn(async move {
+            let _ = cl
+                .post(url)
+                .header("Content-Type", "application/json")
+                .header(reqwest::header::AUTHORIZATION, auth)
+                .json(&curr_usage)
+                .send()
+                .await;
+        });
+    }
 }

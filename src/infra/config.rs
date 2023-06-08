@@ -36,10 +36,7 @@ pub type RwHashMap<K, V> = DashMap<K, V, ahash::RandomState>;
 pub static VERSION: &str = env!("GIT_VERSION");
 pub static COMMIT_HASH: &str = env!("GIT_COMMIT_HASH");
 pub static BUILD_DATE: &str = env!("GIT_BUILD_DATE");
-#[cfg(feature = "zo_functions")]
 pub static HAS_FUNCTIONS: bool = true;
-#[cfg(not(feature = "zo_functions"))]
-pub static HAS_FUNCTIONS: bool = false;
 
 pub static CONFIG: Lazy<Config> = Lazy::new(init);
 pub static INSTANCE_ID: Lazy<RwHashMap<String, String>> = Lazy::new(DashMap::default);
@@ -204,6 +201,18 @@ pub struct Common {
     pub prometheus_enabled: bool,
     #[env_config(name = "ZO_PRINT_KEY_CONFIG", default = false)]
     pub print_key_config: bool,
+    #[env_config(
+        name = "USAGE_AUTH",
+        default = "cm9vdEBleGFtcGxlLmNvbTpUZ0ZzZFpzTUZQdzg2SzRK"
+    )]
+    pub usage_auth: String,
+    #[env_config(
+        name = "USAGE_EP",
+        default = "https://api.openobserve.ai/api/meta/billings/_json"
+    )]
+    pub usage_url: String,
+    #[env_config(name = "USAGE_BATCH_SIZE", default = 10)]
+    pub usage_batch_size: usize,
 }
 
 #[derive(EnvConfig)]

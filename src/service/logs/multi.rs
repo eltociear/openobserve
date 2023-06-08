@@ -62,7 +62,6 @@ pub async fn ingest(
             )),
         );
     }
-    #[cfg(feature = "zo_functions")]
     let mut runtime = crate::service::ingestion::init_functions_runtime();
 
     let mut min_ts =
@@ -81,7 +80,7 @@ pub async fn ingest(
     let mut trigger: Option<Trigger> = None;
 
     // Start Register Transforms for stream
-    #[cfg(feature = "zo_functions")]
+
     let (local_trans, stream_vrl_map) = crate::service::ingestion::register_stream_transforms(
         org_id,
         StreamType::Logs,
@@ -120,7 +119,7 @@ pub async fn ingest(
         // JSON Flattening
         value = json::flatten_json_and_format_field(&value);
         // Start row based transform
-        #[cfg(feature = "zo_functions")]
+
         if !local_trans.is_empty() {
             value = crate::service::ingestion::apply_stream_transform(
                 &local_trans,
@@ -130,7 +129,7 @@ pub async fn ingest(
                 &mut runtime,
             );
         }
-        #[cfg(feature = "zo_functions")]
+
         if value.is_null() || !value.is_object() {
             stream_status.status.failed += 1; // transform failed or dropped
             continue;
@@ -211,7 +210,14 @@ pub async fn ingest(
 
     req_stats.response_time = start.elapsed().as_secs_f64();
     //metric + data usage
-    report_ingest_stats(&req_stats, org_id, StreamType::Logs, UsageEvent::Multi).await;
+    report_ingest_stats(
+        &req_stats,
+        org_id,
+        StreamType::Logs,
+        UsageEvent::Multi,
+        local_trans.len() as u16,
+    )
+    .await;
     Ok(HttpResponse::Ok().json(IngestionResponse::new(
         http::StatusCode::OK.into(),
         vec![stream_status],

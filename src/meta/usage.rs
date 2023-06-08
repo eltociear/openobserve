@@ -22,13 +22,23 @@ pub struct UsageData {
 pub enum UsageEvent {
     #[serde(rename = "/_bulk")]
     Bulk,
+    #[serde(rename = "/_json")]
     Json,
+    #[serde(rename = "/_multi")]
     Multi,
+    #[serde(rename = "/traces")]
     Traces,
+    #[serde(rename = "/v1/write")]
     Metrics,
+    #[serde(rename = "/_search")]
     Search,
+    #[serde(rename = "/_around")]
+    SearchAround,
+    #[serde(rename = "/_values")]
+    SearchTopNValues,
     Functions,
     Retention,
+    #[serde(rename = "/_kinesis_firehose")]
     KinesisFirehose,
     Syslog,
     EnrichmentTable,
@@ -41,24 +51,27 @@ impl ToString for UsageEvent {
             UsageEvent::Json => "/_json".to_owned(),
             UsageEvent::Multi => "/_multi".to_owned(),
             UsageEvent::Traces => "/traces".to_owned(),
-            UsageEvent::Metrics => "/remote_write".to_owned(),
+            UsageEvent::Metrics => "/v1/write".to_owned(),
             UsageEvent::Search => "/_search".to_owned(),
             UsageEvent::Functions => "functions".to_owned(),
             UsageEvent::Retention => "data_retention".to_owned(),
             UsageEvent::KinesisFirehose => "_kinesis_firehose".to_owned(),
             UsageEvent::Syslog => "syslog".to_owned(),
             UsageEvent::EnrichmentTable => "enrichment_table".to_owned(),
+            UsageEvent::SearchAround => "/_around".to_owned(),
+            UsageEvent::SearchTopNValues => "/_values".to_owned(),
         }
     }
 }
 
+#[derive(Debug)]
 pub struct RequestStats {
     pub size: f64,
     pub records: u64,
     pub response_time: f64,
 }
-impl RequestStats {
-    pub fn default() -> Self {
+impl Default for RequestStats {
+    fn default() -> Self {
         Self {
             size: 0.0,
             records: 0,
