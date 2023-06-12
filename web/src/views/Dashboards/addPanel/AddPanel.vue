@@ -34,7 +34,7 @@
           @click="goBackToDashboardList" />
         <q-btn class="q-ml-md text-bold" outline padding="sm lg" color="white" text-color="black" no-caps
           :label="t('panel.save')" data-test="dashboard-panel-save" @click="savePanelOnClick" />
-        <q-btn class="q-ml-md text-bold no-border" data-cy="dashboard-apply" padding="sm lg" color="secondary" no-caps :label="t('panel.apply')"
+        <q-btn class="q-ml-md text-bold no-border" data-test="dashboard-apply" padding="sm lg" color="secondary" no-caps :label="t('panel.apply')"
           @click="runQuery" />
       </div>
     </div>

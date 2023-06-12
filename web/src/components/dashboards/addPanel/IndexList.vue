@@ -20,7 +20,7 @@
         v-model="dashboardPanelData.data.fields.stream_type"
         :label="t('dashboard.selectStreamType')"
         :options="data.streamType"
-        data-cy="index-dropdown-stream_type"
+        data-test="index-dropdown-stream_type"
         input-debounce="0"
         behavior="menu"
         filled
@@ -32,7 +32,7 @@
         v-model="dashboardPanelData.data.fields.stream"
         :label="t('dashboard.selectIndex')"
         :options="filteredStreams"
-        data-cy="index-dropdown-stream"
+        data-test="index-dropdown-stream"
         input-debounce="0"
         behavior="menu"
         use-input
@@ -158,7 +158,7 @@
         <template #top-right>
           <q-input
             v-model="dashboardPanelData.meta.stream.filterField"
-            data-cy="index-field-search-input"
+            data-test="index-field-search-input"
             filled
             borderless
             dense
